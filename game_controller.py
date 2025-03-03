@@ -1,4 +1,5 @@
 from direct.showbase.ShowBase import ShowBase
+from direct.showbase.ShowBaseGlobal import globalClock
 from direct.task import Task
 from panda3d.core import CollisionNode, GeomNode, CollisionRay, CollisionHandlerQueue, CollisionTraverser, MouseButton, \
     WindowProperties, Quat
@@ -119,7 +120,8 @@ class Main(ShowBase):
         distance_factor = 0.5
         self.camera.set_pos(x + delta_x*distance_factor, y + delta_y*distance_factor, z + delta_z*distance_factor)
 
-        self.game_world.tick()
+        self.game_world.tick(globalClock.getDt())
+        #how much time has passed since the last frame
         self.player_view.tick()
 
         if self.game_world.get_property("quit"):

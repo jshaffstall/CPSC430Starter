@@ -1,5 +1,6 @@
 class GameObject:
-    def __init__(self, position, kind, id, size):
+    def __init__(self, position, kind, id, size, physics):
+        self.physics = physics
         self.position = position
         self.kind = kind
         self.id = id
@@ -10,6 +11,9 @@ class GameObject:
 
         # TODO: need a place to store the physics objects if the
         # subclasses create one
+    #if kind == "crate":
+    #if kind == "player":
+    #dont do this
 
     @property
     def size(self):
