@@ -1,6 +1,8 @@
+from direct.showbase.InputStateGlobal import inputState
 from direct.showbase.ShowBase import ShowBase
 from direct.showbase.ShowBaseGlobal import globalClock
 from direct.task import Task
+from panda3d.bullet import BulletDebugNode
 from panda3d.core import CollisionNode, GeomNode, CollisionRay, CollisionHandlerQueue, CollisionTraverser, MouseButton, \
     WindowProperties, Quat
 from pubsub import pub
@@ -10,18 +12,18 @@ from world_view import WorldView
 from game_world import GameWorld
 
 controls = {
-    'w-repeat': 'moveForward',
-    's-repeat': 'moveBackward',
-    'a-repeat': 'moveLeft',
-    'd-repeat': 'moveRight',
-    'w': 'moveForward',
-    's': 'moveBackward',
-    'a': 'moveLeft',
-    'd': 'moveRight',
     'escape': 'toggleMouseMove',
     't': 'toggleTexture',
     'mouse1': 'toggleTexture',
 }
+
+held_keys = {
+    'w': 'moveForward',
+    's': 'moveBackward',
+    'a': 'moveLeft',
+    'd': 'moveRight',
+}
+
 
 class Main(ShowBase):
     def go(self):
@@ -44,6 +46,11 @@ class Main(ShowBase):
         self.input_events = {}
         for key in controls:
             self.accept(key, self.input_event, [controls[key]])
+
+        for key in held_keys:
+            inputState.watchWithModifiers(held_keys[key], key)
+
+        #inputState.isSet('forward')
 
         self.SpeedRot = 0.05
         self.CursorOffOn = 'Off'
@@ -117,8 +124,10 @@ class Main(ShowBase):
         delta_y = -forward[1]
         delta_z = -forward[2]
         x, y, z = self.player.position
+        z_adjust = self.player.size[1]/2
+
         distance_factor = 0.5
-        self.camera.set_pos(x + delta_x*distance_factor, y + delta_y*distance_factor, z + delta_z*distance_factor)
+        self.camera.set_pos(x + delta_x*distance_factor, y + delta_y*distance_factor, z + delta_z*distance_factor + z_adjust)
 
         self.game_world.tick(globalClock.getDt())
         #how much time has passed since the last frame
@@ -146,8 +155,17 @@ class Main(ShowBase):
         self.player = None
         pub.subscribe(self.new_player_object, 'create')
 
+        #debug visualization for physics objects
+        debugNode = BulletDebugNode('Debug')
+        debugNode.showWireframe(True)
+        debugNode.showConstraints(True)
+        debugNode.showBoundingBoxes(False)
+        debugNode.showNormals(False)
+        debugNP = render.attachNewNode(debugNode)
+        debugNP.show()
+
         # create model and view
-        self.game_world = GameWorld()
+        self.game_world = GameWorld(debugNode)
         self.player_view = WorldView(self.game_world)
 
 

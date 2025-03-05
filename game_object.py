@@ -1,3 +1,6 @@
+from panda3d.core import TransformState, VBase3
+
+
 class GameObject:
     def __init__(self, position, kind, id, size, physics):
         self.physics = physics
@@ -14,6 +17,14 @@ class GameObject:
     #if kind == "crate":
     #if kind == "player":
     #dont do this
+
+    @property
+    def physics(self):
+        return self._physics
+
+    @physics.setter
+    def physics(self, value):
+        self._physics = value
 
     @property
     def size(self):
@@ -41,10 +52,14 @@ class GameObject:
 
     @property
     def position(self):
+        if self.physics:
+            return self.physics.getTransform().getPos()
         return self._position
 
     @position.setter
     def position(self, value):
+        if self.physics:
+            self.physics.setTransform(TransformState.makePos(VBase3(value[0], value[1], value[2])))
         self._position = value
 
     @property
