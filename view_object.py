@@ -6,8 +6,10 @@ class ViewObject:
     def __init__(self, game_object):
         self.game_object = game_object
 
-        self.node_path = base.render.attachNewNode(self.game_object.physics)
-
+        if self.game_object.physics:
+            self.node_path = base.render.attachNewNode(self.game_object.physics)
+        else:
+            self.node_path = base.render.attachNewNode(self.game_object.kind)
         # TODO: we don't always need a cube model.  Check the
         # game object's kind property to what type of model to use
         self.cube = base.loader.loadModel("Models/cube")
@@ -56,11 +58,14 @@ class ViewObject:
         # aren't also physics objects.  physics objects will
         # have their position and rotation updated by the
         # engine automatically
-        h = self.game_object.z_rotation
-        p = self.game_object.x_rotation
-        r = self.game_object.y_rotation
-        self.cube.setHpr(h, p, r)
-        self.cube.set_pos(0,0,0)
+        if not self.game_object.physics:
+            h = self.game_object.z_rotation
+            p = self.game_object.x_rotation
+            r = self.game_object.y_rotation
+            self.cube.setHpr(h, p, r)
+            self.cube.set_pos(*self.game_object.position)
+            #self.cube.set_pos(0,0,0)
+
         # This sort of interaction with the view itself is fine
         # for both physics and non-physics objects
         if self.toggle_texture_pressed and self.is_selected:

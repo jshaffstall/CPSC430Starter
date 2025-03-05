@@ -39,7 +39,7 @@ class GameWorld:
         return node
 
     def create_box (self, position, size, kind, mass):
-        shape = BulletBoxShape(Vec3(size[0],size[1],size[2]))
+        shape = BulletBoxShape(Vec3(size[0] / 2, size[1] / 2, size[2] / 2))
         node = BulletRigidBodyNode(kind)
         node.setMass(mass)
         node.addShape(shape)
