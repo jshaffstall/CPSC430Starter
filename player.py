@@ -18,4 +18,3 @@ class Player(GameObject):
         # TODO: the physics engine needs to detect the
         # collision and call this function
         pass
-

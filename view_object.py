@@ -10,6 +10,7 @@ class ViewObject:
             self.node_path = base.render.attachNewNode(self.game_object.physics)
         else:
             self.node_path = base.render.attachNewNode(self.game_object.kind)
+
         # TODO: we don't always need a cube model.  Check the
         # game object's kind property to what type of model to use
         self.cube = base.loader.loadModel("Models/cube")
@@ -54,7 +55,7 @@ class ViewObject:
         self.is_selected = True
 
     def tick(self):
-        # TODO: this will only be needed for game objects that
+        # This will only be needed for game objects that
         # aren't also physics objects.  physics objects will
         # have their position and rotation updated by the
         # engine automatically
@@ -64,7 +65,6 @@ class ViewObject:
             r = self.game_object.y_rotation
             self.cube.setHpr(h, p, r)
             self.cube.set_pos(*self.game_object.position)
-            #self.cube.set_pos(0,0,0)
 
         # This sort of interaction with the view itself is fine
         # for both physics and non-physics objects
@@ -79,4 +79,3 @@ class ViewObject:
             self.toggle_texture_pressed = False
 
         self.is_selected = False
-

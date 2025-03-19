@@ -9,8 +9,8 @@ class WorldView:
         pub.subscribe(self.new_game_object, 'create')
 
     def new_game_object(self, game_object):
-        #if game_object.kind == 'player':
-          #  return
+        if game_object.kind == 'player':
+            return
 
         view_object = ViewObject(game_object)
         self.view_objects[game_object.id] = view_object

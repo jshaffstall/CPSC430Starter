@@ -14,9 +14,6 @@ class GameObject:
 
         # TODO: need a place to store the physics objects if the
         # subclasses create one
-    #if kind == "crate":
-    #if kind == "player":
-    #dont do this
 
     @property
     def physics(self):
@@ -54,12 +51,14 @@ class GameObject:
     def position(self):
         if self.physics:
             return self.physics.getTransform().getPos()
+
         return self._position
 
     @position.setter
     def position(self, value):
         if self.physics:
             self.physics.setTransform(TransformState.makePos(VBase3(value[0], value[1], value[2])))
+
         self._position = value
 
     @property
