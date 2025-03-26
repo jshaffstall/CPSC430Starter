@@ -1,95 +1,101 @@
-from panda3d.bullet import BulletWorld, BulletBoxShape, BulletRigidBodyNode, BulletCapsuleShape, ZUp
-from panda3d.core import Vec3, VBase3, TransformState, Point3
-from pubsub import pub
-from game_object import GameObject
-from player import Player
+from panda3d.core import TransformState, VBase3
 
-class GameWorld:
-    def __init__(self, debugNode=None):
-        self.properties = {}
-        self.game_objects = {}
 
-        self.next_id = 0
-        self.physics_world = BulletWorld()
-        self.physics_world.setGravity(Vec3(0, 0, -9.81))
+class GameObject:
+    def __init__(self, position, kind, id, size, physics):
+        self.physics = physics
+        self.position = position
+        self.kind = kind
+        self.id = id
+        self.x_rotation = 0
+        self.y_rotation = 0
+        self.z_rotation = 0
+        self.size = size
 
-        if debugNode:
-            self.physics_world.setDebugNode(debugNode)
+        self.is_selected = False
 
-        self.kind_to_shape = {
-            "crate": self.create_box,
-            "red_box": self.create_box,
-            "enemy": self.create_capsule,
-        }
+        # Store a reference back to the game object
+        if physics:
+            self.physics.setPythonTag("owner", self)
 
-    def create_capsule(self, position, size, kind, mass):
-        radius = size[0]
-        height = size[1]
-        shape = BulletCapsuleShape(radius, height, ZUp)
-        node = BulletRigidBodyNode(kind)
-        node.setMass(mass)
-        node.addShape(shape)
-        node.setTransform(TransformState.makePos(VBase3(position[0], position[1], position[2])))
+    @property
+    def physics(self):
+        return self._physics
 
-        self.physics_world.attachRigidBody(node)
-        return node
+    @physics.setter
+    def physics(self, value):
+        self._physics = value
 
-    def create_box(self, position, size, kind, mass):
-        shape = BulletBoxShape(Vec3(size[0]/2, size[1]/2, size[2]/2))
-        node = BulletRigidBodyNode(kind)
-        node.setMass(mass)
-        node.addShape(shape)
-        node.setTransform(TransformState.makePos(VBase3(position[0], position[1], position[2])))
+    @property
+    def size(self):
+        return self._size
 
-        self.physics_world.attachRigidBody(node)
-        return node
+    @size.setter
+    def size(self, value):
+        self._size = value
 
-    def create_physics_object(self, position, kind, size, mass):
-        if kind in self.kind_to_shape:
-            return self.kind_to_shape[kind](position, size, kind, mass)
+    @property
+    def kind(self):
+        return self._kind
 
-        return None
+    @kind.setter
+    def kind(self, value):
+        self._kind = value
 
-    def create_object(self, position, kind, size, mass, subclass):
-        physics = self.create_physics_object(position, kind, size, mass)
-        obj = subclass(position, kind, self.next_id, size, physics)
+    @property
+    def id(self):
+        return self._id
 
-        self.next_id += 1
-        self.game_objects[obj.id] = obj
+    @id.setter
+    def id(self, value):
+        self._id = value
 
-        pub.sendMessage('create', game_object=obj)
-        return obj
+    @property
+    def position(self):
+        if self.physics:
+            return self.physics.getTransform().getPos()
+
+        return self._position
+
+    @position.setter
+    def position(self, value):
+        if self.physics:
+            self.physics.setTransform(TransformState.makePos(VBase3(value[0], value[1], value[2])))
+
+        self._position = value
+
+    @property
+    def x_rotation(self):
+        return self._x_rotation
+
+    @x_rotation.setter
+    def x_rotation(self, value):
+        self._x_rotation = value
+
+    @property
+    def y_rotation(self):
+        return self._y_rotation
+
+    @y_rotation.setter
+    def y_rotation(self, value):
+        self._y_rotation = value
+
+    @property
+    def z_rotation(self):
+        return self._z_rotation
+
+    @z_rotation.setter
+    def z_rotation(self, value):
+        self._z_rotation = value
+
+    def selected(self):
+         self.is_selected = True
 
     def tick(self, dt):
-        for id in self.game_objects:
-            self.game_objects[id].tick()
+        pass
 
-        self.physics_world.do_physics(dt)
+    def clicked(self):
+        pass
 
-    def load_world(self):
-        self.create_object([0, 0, 0], "crate", (5,2,1), 10, GameObject)
-        self.create_object([0, -20, 0], "player", (1, 0.5, 0.25, 0.5), 10, Player)
-        self.create_object([0, 0, -5], "crate", (1000, 1000, 0.5), 0, GameObject)
-
-    def get_property(self, key):
-        if key in self.properties:
-            return self.properties[key]
-
-        return None
-
-    def set_property(self, key, value):
-        self.properties[key] = value
-
-    def get_nearest(self, from_pt, to_pt):
-        # This shows the technique of near object detection using the physics engine.
-        fx, fy, fz = from_pt
-        tx, ty, tz = to_pt
-        result = self.physics_world.rayTestClosest(Point3(fx, fy, fz), Point3(tx, ty, tz))
-        return result
-
-    # TODO: use this to demonstrate a teleporting trap
-    def get_all_contacts(self, game_object):
-        if game_object.physics:
-            return self.physics_world.contactTest(game_object.physics).getContacts()
-
-        return []
+    def collision(self, other):
+        pass
