@@ -1,6 +1,5 @@
-from panda3d.bullet import BulletWorld, BulletBoxShape, BulletRigidBodyNode, BulletCapsuleShape, ZUp, BulletPlaneShape, \
-    BulletCharacterControllerNode, BulletDebugNode
-from panda3d.core import Vec3, TransformState, VBase3, Point3
+from panda3d.bullet import BulletWorld, BulletBoxShape, BulletRigidBodyNode, BulletCapsuleShape, ZUp, BulletSphereShape
+from panda3d.core import Vec3, TransformState, VBase3, Point3, LColor
 from pubsub import pub
 from game_object import GameObject
 from player import Player
@@ -8,7 +7,12 @@ from player import Player
 
 class GameWorld:
     def __init__(self, debugNode):
-        self.properties = {}
+        self.properties = {
+            "score": 0,
+            "time_remaining": 60.0,
+            "game_over": False,
+            "quit": False
+        }
         self.game_objects = {}
 
         self.next_id = 0
@@ -19,7 +23,9 @@ class GameWorld:
         self.kind_to_shape = {
             "crate": self.create_box,
             "floor": self.create_box,
-            "red box": self.create_box,
+            "ball": self.create_sphere,
+            "goal": self.create_box,
+            "wall": self.create_box,
         }
 
     def create_capsule(self, position, size, kind, mass):
@@ -48,9 +54,9 @@ class GameWorld:
         node.addShape(shape)
         node.setTransform(TransformState.makePos(VBase3(position[0], position[1], position[2])))
         node.setRestitution(0.0)
-
+        if kind == "goal":
+            node.setPythonTag("color", LColor(1, 1, 1, 1))
         self.physics_world.attachRigidBody(node)
-
         return node
 
     def create_physics_object(self, position, kind, size, mass):
@@ -59,10 +65,13 @@ class GameWorld:
 
         return None
 
-    def create_object(self, position, kind, size, mass, subclass):
+    def create_object(self, position, kind, size, mass, subclass, z_rotation=0):
         physics = self.create_physics_object(position, kind, size, mass)
         obj = subclass(position, kind, self.next_id, size, physics)
-
+        obj.z_rotation = z_rotation # set for goal rotation issue
+        if physics:
+            transform = TransformState.makePosHpr(VBase3(position[0], position[1], position[2]), VBase3(z_rotation, 0, 0))
+            physics.setTransform(transform)
         self.next_id += 1
         self.game_objects[obj.id] = obj
 
@@ -76,15 +85,22 @@ class GameWorld:
         self.physics_world.doPhysics(dt)
 
     def load_world(self):
-        self.create_object([3, 0, 0], "crate", (5, 2, 1), 10, GameObject)
-        self.create_object([0, -20, 0], "player", (1, 0.5, 0.25, 0.5), 10, Player)
-        self.create_object([0, 0, -5], "crate", (1000, 1000, 0.5), 0, GameObject)
+        #floor
+        self.create_object([0, 0, -5], "floor", (40, 40, 0.5), 0, GameObject)
+        #player starting position
+        self.create_object([0, -5, 0], "player", (1, 0.5, 0.25, 0.5), 10, Player)
+        #soccer ball starting position
+        self.create_object([0, 0, 0.5], "ball", (1, 1, 1), 1, GameObject)
+        #soccer goal
+        self.create_object([0, 10, -4.5], "goal", (3, 1, 2), 0, GameObject, z_rotation=180)
+        # four walls enclosing field
+        self.create_object([0, 20.5, -2.5], "wall", (40, 1, 5), 0, GameObject)
+        self.create_object([0, -20.5, -2.5], "wall", (40, 1, 5), 0, GameObject)
+        self.create_object([20.5, 0, -2.5], "wall", (1, 40, 5), 0, GameObject)
+        self.create_object([-20.5, 0, -2.5], "wall", (1, 40, 5), 0, GameObject)
 
     def get_property(self, key):
-        if key in self.properties:
-            return self.properties[key]
-
-        return None
+        return self.properties.get(key)
 
     def set_property(self, key, value):
         self.properties[key] = value
