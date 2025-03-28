@@ -125,7 +125,7 @@ class GameWorld:
 
     def load_world(self):
         #floor
-        self.create_object([0, 0, -5], "floor", (40, 40, 0.5), 0, GameObject)
+        self.create_object([0, 0, -5], "floor", (40, 40, 2), 0, GameObject)
 
         #player starting position
         self.create_object([0, -5, 10], "player", (1, 0.5, 0.25, 0.5), 10, Player)
