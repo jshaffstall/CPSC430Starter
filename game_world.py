@@ -130,7 +130,7 @@ class GameWorld:
         #player starting position
         self.create_object([0, -5, 10], "player", (1, 0.5, 0.25, 0.5), 10, Player)
         #soccer ball starting position
-        self.create_object([0, 0, 0.5], "ball", (1, 1, 1), 1, GameObject)
+        self.create_object([0, 0, 0.5], "ball", (0.5, 0.5, 0.5), 1, GameObject)
         #soccer goal
         self.create_object([0, 10, -4.5], "goal", (3, 1, 2), 0, GameObject, z_rotation=180)
         # four walls enclosing field

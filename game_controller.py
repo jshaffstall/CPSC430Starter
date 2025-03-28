@@ -168,7 +168,7 @@ class Main(ShowBase):
                     q = Quat()
                     q.setHpr((self.player.getH(), 0, 0))
                     direction = q.getForward()
-                    ball.physics.applyCentralImpulse(direction * 20)
+                    ball.physics.applyCentralImpulse(direction * 15)
 
     def new_player_object(self, game_object):
         if game_object.kind == 'player':
