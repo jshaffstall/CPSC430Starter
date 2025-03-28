@@ -15,7 +15,7 @@ controls = {
     'escape': 'toggleMouseMove',
     't': 'teleport',
     'mouse1': 'toggleTexture',
-    'space': 'jump',
+    'space': 'kick',
 }
 
 held_keys = {
@@ -133,14 +133,8 @@ class Main(ShowBase):
         # It moves the camera a bit back from the center of the player object.
         q = Quat()
         q.setHpr((h, p, r))
-        forward = q.getForward()
-        delta_x = -forward[0]
-        delta_y = -forward[1]
-        delta_z = -forward[2]
         x, y, z = self.player.getPos()
-        distance_factor = 0.5
         z_adjust = self.player.game_object.size[0]
-        # self.camera.set_pos(x + delta_x*distance_factor, y + delta_y*distance_factor, z + z_adjust)
         self.camera.set_pos(x, y, z + z_adjust)
 
         dt = globalClock.getDt()
@@ -162,6 +156,23 @@ class Main(ShowBase):
         if inputState.isSet('moveLeft'): speed.setX(-delta)
         if inputState.isSet('moveRight'): speed.setX(delta)
         self.player.setLinearMovement(speed)
+
+        if 'kick' in events:
+            ball = next((obj for obj in self.game_world.game_objects.values() if obj.kind == "ball"), None)
+            if ball:
+                player_pos = self.player.getPos()
+                ball_pos = ball.position
+                dist = (player_pos - ball_pos).length()
+                if dist < 2: #distance from player to kick
+                    #calculate direction based on player's heading value
+                    q = Quat()
+                    q.setHpr((self.player.getH(), 0, 0))
+                    direction = q.getForward()
+                    ball.physics.applyCentralImpulse(direction * 20)
+
+    def new_player_object(self, game_object):
+        if game_object.kind == 'player':
+            self.player = game_object
 
     def __init__(self):
         ShowBase.__init__(self)

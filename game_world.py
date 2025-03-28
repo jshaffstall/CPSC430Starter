@@ -14,7 +14,6 @@ class GameWorld:
             "quit": False
         }
         self.game_objects = {}
-
         self.next_id = 0
         self.physics_world = BulletWorld()
         self.physics_world.setGravity(Vec3(0, 0, -9.81))
@@ -59,6 +58,18 @@ class GameWorld:
         self.physics_world.attachRigidBody(node)
         return node
 
+    def create_sphere(self, position, size, kind, mass):
+        radius = size[0] / 2
+        shape = BulletSphereShape(radius)
+        node = BulletRigidBodyNode(kind)
+        node.setMass(mass)
+        node.addShape(shape)
+        node.setTransform(TransformState.makePos(VBase3(position[0], position[1], position[2])))
+        node.setRestitution(0.5)
+        self.physics_world.attachRigidBody(node)
+
+        return node
+
     def create_physics_object(self, position, kind, size, mass):
         if kind in self.kind_to_shape:
             return self.kind_to_shape[kind](position, size, kind, mass)
@@ -78,17 +89,46 @@ class GameWorld:
         pub.sendMessage('create', game_object=obj)
         return obj
 
+    def check_goal(self, ball):
+        goal = next((obj for obj in self.game_objects.values() if obj.kind == "goal"), None)
+        if not goal or not ball:
+            return False
+        ball_pos = ball.position
+        goal_pos = goal.position
+        goal_size = goal.size
+        if (abs(ball_pos[0] - goal_pos[0]) < goal_size[0] / 2 + 0.5 and
+            abs(ball_pos[1] - goal_pos[1]) < goal_size[1] / 2 + 0.5 and
+            ball_pos[2] < goal_size[2]):
+            return True
+        return False
+
+    def reset_ball(self, ball):
+        ball.physics.setTransform(TransformState.makePos(VBase3(0, 0, 0.5)))
+        ball.physics.setLinearVelocity(Vec3(0, 0, 0))
+
     def tick(self, dt):
         for id in self.game_objects:
             self.game_objects[id].tick(dt)
 
         self.physics_world.doPhysics(dt)
 
+        if not self.properties["game_over"]:
+            self.properties["time_remaining"] -= dt
+            ball = next((obj for obj in self.game_objects.values() if obj.kind == "ball"), None)
+            if ball and self.check_goal(ball):
+                self.properties["score"] += 1
+                pub.sendMessage('property', key="score", value=self.properties["score"])
+                self.reset_ball(ball)
+            if self.properties["time_remaining"] <= 0:
+                self.properties["game_over"] = True
+                pub.sendMessage("game_event", event="end")
+
     def load_world(self):
         #floor
         self.create_object([0, 0, -5], "floor", (40, 40, 0.5), 0, GameObject)
+
         #player starting position
-        self.create_object([0, -5, 0], "player", (1, 0.5, 0.25, 0.5), 10, Player)
+        self.create_object([0, -5, 10], "player", (1, 0.5, 0.25, 0.5), 10, Player)
         #soccer ball starting position
         self.create_object([0, 0, 0.5], "ball", (1, 1, 1), 1, GameObject)
         #soccer goal
