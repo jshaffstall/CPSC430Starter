@@ -1,6 +1,5 @@
-from panda3d.bullet import BulletWorld, BulletBoxShape, BulletRigidBodyNode, BulletCapsuleShape, ZUp, BulletPlaneShape, \
-    BulletCharacterControllerNode, BulletDebugNode
-from panda3d.core import Vec3, TransformState, VBase3, Point3
+from panda3d.bullet import BulletWorld, BulletBoxShape, BulletRigidBodyNode, BulletCapsuleShape, ZUp, BulletSphereShape
+from panda3d.core import Vec3, TransformState, VBase3, Point3, LColor
 from pubsub import pub
 from game_object import GameObject
 from player import Player
@@ -9,9 +8,13 @@ from teleporter import Teleporter
 
 class GameWorld:
     def __init__(self, debugNode):
-        self.properties = {}
+        self.properties = {
+            "score": 0,
+            "time_remaining": 60.0,
+            "game_over": False,
+            "quit": False
+        }
         self.game_objects = {}
-
         self.next_id = 0
         self.physics_world = BulletWorld()
         self.physics_world.setGravity(Vec3(0, 0, -9.81))
@@ -20,6 +23,9 @@ class GameWorld:
         self.kind_to_shape = {
             "crate": self.create_box,
             "floor": self.create_box,
+            "ball": self.create_sphere,
+            "goal": self.create_box,
+            "wall": self.create_box,
             "red box": self.create_box,
             "teleporter": self.create_box,
         }
@@ -50,7 +56,19 @@ class GameWorld:
         node.addShape(shape)
         node.setTransform(TransformState.makePos(VBase3(position[0], position[1], position[2])))
         node.setRestitution(0.0)
+        if kind == "goal":
+            node.setPythonTag("color", LColor(1, 1, 1, 1))
+        self.physics_world.attachRigidBody(node)
+        return node
 
+    def create_sphere(self, position, size, kind, mass):
+        radius = size[0] / 2
+        shape = BulletSphereShape(radius)
+        node = BulletRigidBodyNode(kind)
+        node.setMass(mass)
+        node.addShape(shape)
+        node.setTransform(TransformState.makePos(VBase3(position[0], position[1], position[2])))
+        node.setRestitution(0.5)
         self.physics_world.attachRigidBody(node)
 
         return node
@@ -61,15 +79,35 @@ class GameWorld:
 
         return None
 
-    def create_object(self, position, kind, size, mass, subclass):
+    def create_object(self, position, kind, size, mass, subclass, z_rotation=0):
         physics = self.create_physics_object(position, kind, size, mass)
         obj = subclass(position, kind, self.next_id, size, physics)
-
+        obj.z_rotation = z_rotation # set for goal rotation issue
+        if physics:
+            transform = TransformState.makePosHpr(VBase3(position[0], position[1], position[2]), VBase3(z_rotation, 0, 0))
+            physics.setTransform(transform)
         self.next_id += 1
         self.game_objects[obj.id] = obj
 
         pub.sendMessage('create', game_object=obj)
         return obj
+
+    def check_goal(self, ball):
+        goal = next((obj for obj in self.game_objects.values() if obj.kind == "goal"), None)
+        if not goal or not ball:
+            return False
+        ball_pos = ball.position
+        goal_pos = goal.position
+        goal_size = goal.size
+        if (abs(ball_pos[0] - goal_pos[0]) < goal_size[0] / 2 + 0.5 and
+            abs(ball_pos[1] - goal_pos[1]) < goal_size[1] / 2 + 0.5 and
+            ball_pos[2] < goal_size[2]):
+            return True
+        return False
+
+    def reset_ball(self, ball):
+        ball.physics.setTransform(TransformState.makePos(VBase3(0, 0, 0.5)))
+        ball.physics.setLinearVelocity(Vec3(0, 0, 0))
 
     def tick(self, dt):
         for id in self.game_objects:
@@ -87,7 +125,33 @@ class GameWorld:
 
         self.physics_world.doPhysics(dt)
 
+        if not self.properties["game_over"]:
+            self.properties["time_remaining"] -= dt
+            ball = next((obj for obj in self.game_objects.values() if obj.kind == "ball"), None)
+            if ball and self.check_goal(ball):
+                self.properties["score"] += 1
+                pub.sendMessage('property', key="score", value=self.properties["score"])
+                self.reset_ball(ball)
+            if self.properties["time_remaining"] <= 0:
+                self.properties["game_over"] = True
+                pub.sendMessage("game_event", event="end")
+
     def load_world(self):
+        #floor
+        self.create_object([0, 0, -5], "floor", (40, 40, 2), 0, GameObject)
+
+        #player starting position
+        self.create_object([0, -5, 10], "player", (1, 0.5, 0.25, 0.5), 10, Player)
+        #soccer ball starting position
+        self.create_object([0, 0, 0.5], "ball", (0.5, 0.5, 0.5), 1, GameObject)
+        #soccer goal
+        self.create_object([0, 10, -4.5], "goal", (3, 1, 2), 0, GameObject, z_rotation=180)
+        # four walls enclosing field
+        self.create_object([0, 20.5, -2.5], "wall", (40, 1, 5), 0, GameObject)
+        self.create_object([0, -20.5, -2.5], "wall", (40, 1, 5), 0, GameObject)
+        self.create_object([20.5, 0, -2.5], "wall", (1, 40, 5), 0, GameObject)
+        self.create_object([-20.5, 0, -2.5], "wall", (1, 40, 5), 0, GameObject)
+        #jay additions 3/31
         self.create_object([3, 0, 0], "crate", (5, 2, 1), 10, GameObject)
         self.create_object([-3, 0, -4], "teleporter", (1, 1, 1), 0, Teleporter)
         player = self.create_object([0, -20, 0], "player", (1, 0.5, 0.25, 0.5), 10, Player)
@@ -95,10 +159,7 @@ class GameWorld:
         self.create_object([0, 0, -5], "crate", (1000, 1000, 0.5), 0, GameObject)
 
     def get_property(self, key):
-        if key in self.properties:
-            return self.properties[key]
-
-        return None
+        return self.properties.get(key)
 
     def set_property(self, key, value):
         self.properties[key] = value

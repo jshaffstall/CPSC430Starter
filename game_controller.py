@@ -1,8 +1,8 @@
 from direct.showbase.ShowBase import ShowBase
+from direct.showbase.ShowBaseGlobal import globalClock
 from direct.task import Task
 from panda3d.bullet import BulletDebugNode
-from panda3d.core import CollisionNode, GeomNode, CollisionRay, CollisionHandlerQueue, CollisionTraverser, MouseButton, \
-    WindowProperties, Quat, Vec3, Point3
+from panda3d.core import CollisionTraverser, WindowProperties, Quat, Vec3, Point3, TextNode
 from direct.showbase.InputStateGlobal import inputState
 from pubsub import pub
 import sys
@@ -15,7 +15,7 @@ controls = {
     'escape': 'toggleMouseMove',
     't': 'teleport',
     'mouse1': 'toggleTexture',
-    'space': 'jump',
+    'space': 'kick',
 }
 
 held_keys = {
@@ -33,6 +33,8 @@ class Main(ShowBase):
         self.player = PandaBulletCharacterController(self.game_world.physics_world, self.render, self.player)
 
         self.taskMgr.add(self.tick)
+        self.score_text = self.make_text("Score: 0", (0.9, 0.95), TextNode.ARight)
+        self.time_text = self.make_text("Time: 60", (-0.9, 0.95), TextNode.ALeft)
 
         self.input_events = {}
         for key in controls:
@@ -50,14 +52,34 @@ class Main(ShowBase):
         self.camera_pitch = 0
 
         pub.subscribe(self.handle_input, 'input')
-
+        pub.subscribe(self.handle_game_event, "game_event")
+        pub.subscribe(self.update_score, "property")
         self.run()
+
+    def make_text(self, text, pos, align):
+        text_node = TextNode('text')
+        text_node.setText(text)
+        text_node.setAlign(align)
+        text_np = self.aspect2d.attachNewNode(text_node)
+        text_np.setScale(0.07)
+        text_np.setPos(pos[0], 0, pos[1])
+        return text_np
+
+    def handle_game_event(self, event):
+        if event == "end":
+            final_score = self.game_world.get_property("score")
+            self.make_text(f"Game Over! Final Score: {final_score}", (0, 0), TextNode.ACenter)
 
     def handle_input(self, events=None):
         # Simple place to put debug outputs so they only happen on a click
         if 'toggleTexture' in events:
             print(f"Player position: {self.player.getPos()}")
             print(f"Forward position: {self.forward(self.player.getHpr(), self.player.getPos(), 5)}")
+
+
+    def update_score(self, key, value):
+        if key == "score":
+            self.score_text.node().setText(f"Score: {value}")
 
     def input_event(self, event):
         self.input_events[event] = True
@@ -68,10 +90,7 @@ class Main(ShowBase):
         q = Quat()
         q.setHpr((h, p, r))
         forward = q.getForward()
-        delta_x = forward[0]
-        delta_y = forward[1]
-        delta_z = forward[2]
-        return x + delta_x*distance, y + delta_y*distance, z + delta_z*distance
+        return x + forward[0]*distance, y + forward[1]*distance, z + forward[2]*distance
 
     def tick(self, task):
         if 'toggleMouseMove' in self.input_events:
@@ -87,18 +106,13 @@ class Main(ShowBase):
         pub.sendMessage('input', events=self.input_events)
         self.move_player(self.input_events)
 
-        # This is getting the panda rigid body node.  Need to go from that
-        # to the game object using the 'owner' tag that's set when the
-        # game object is created.
-        picked_object = self.game_world.get_nearest(self.player.getPos(), self.forward(self.player.getHpr(), self.player.getPos(), 5))
-        if picked_object and picked_object.getNode() and picked_object.getNode().getPythonTag("owner"):
-            picked_object.getNode().getPythonTag("owner").selected()
+        if not self.game_world.get_property("game_over"):
+            self.time_text.node().setText(f"Time: {int(self.game_world.get_property('time_remaining'))}")
 
         if self.CursorOffOn == 'Off':
             md = self.win.getPointer(0)
             x = md.getX()
             y = md.getY()
-
             if self.win.movePointer(0, base.win.getXSize() // 2, self.win.getYSize() // 2):
                 z_rotation = self.camera.getH() - (x - self.win.getXSize() / 2) * self.SpeedRot
                 x_rotation = self.camera.getP() - (y - self.win.getYSize() / 2) * self.SpeedRot
@@ -119,14 +133,8 @@ class Main(ShowBase):
         # It moves the camera a bit back from the center of the player object.
         q = Quat()
         q.setHpr((h, p, r))
-        forward = q.getForward()
-        delta_x = -forward[0]
-        delta_y = -forward[1]
-        delta_z = -forward[2]
         x, y, z = self.player.getPos()
-        distance_factor = 0.5
         z_adjust = self.player.game_object.size[0]
-        # self.camera.set_pos(x + delta_x*distance_factor, y + delta_y*distance_factor, z + z_adjust)
         self.camera.set_pos(x, y, z + z_adjust)
 
         dt = globalClock.getDt()
@@ -140,32 +148,31 @@ class Main(ShowBase):
         self.input_events.clear()
         return Task.cont
 
-    def new_player_object(self, game_object):
-        if game_object.kind != 'player':
-            return
-
-        self.player = game_object
-
     def move_player(self, events=None):
         speed = Vec3(0, 0, 0)
         delta = 5.0
-
-        if inputState.isSet('moveForward'):
-            speed.setY(delta)
-
-        if inputState.isSet('moveBackward'):
-            speed.setY(-delta)
-
-        if inputState.isSet('moveLeft'):
-            speed.setX(-delta)
-
-        if inputState.isSet('moveRight'):
-            speed.setX(delta)
-
-        if 'jump' in events:
-            self.player.startJump(2)
-
+        if inputState.isSet('moveForward'): speed.setY(delta)
+        if inputState.isSet('moveBackward'): speed.setY(-delta)
+        if inputState.isSet('moveLeft'): speed.setX(-delta)
+        if inputState.isSet('moveRight'): speed.setX(delta)
         self.player.setLinearMovement(speed)
+
+        if 'kick' in events:
+            ball = next((obj for obj in self.game_world.game_objects.values() if obj.kind == "ball"), None)
+            if ball:
+                player_pos = self.player.getPos()
+                ball_pos = ball.position
+                dist = (player_pos - ball_pos).length()
+                if dist < 2: #distance from player to kick
+                    #calculate direction based on player's heading value
+                    q = Quat()
+                    q.setHpr((self.player.getH(), 0, 0))
+                    direction = q.getForward()
+                    ball.physics.applyCentralImpulse(direction * 15)
+
+    def new_player_object(self, game_object):
+        if game_object.kind == 'player':
+            self.player = game_object
 
     def __init__(self):
         ShowBase.__init__(self)

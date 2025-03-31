@@ -1,6 +1,5 @@
-import pubsub.pub
-from panda3d.core import CollisionBox, CollisionNode
 from pubsub import pub
+from panda3d.core import CollisionBox, CollisionNode
 
 class ViewObject:
     def __init__(self, game_object):
@@ -11,18 +10,33 @@ class ViewObject:
         else:
             self.node_path = base.render.attachNewNode(self.game_object.kind)
 
-        # TODO: we don't always need a cube model.  Check the
-        # game object's kind property to what type of model to use
-        self.cube = base.loader.loadModel("Models/cube")
-        self.cube.reparentTo(self.node_path)
+        #load specific models based on kind, coding practice will change, possibly use a dictionary.
+        if self.game_object.kind == "ball":
+            self.model = base.loader.loadModel("Models/soccerBall.egg")
+        elif self.game_object.kind == "goal":
+            self.model = base.loader.loadModel("Models/hockeyGoal.egg")
+        elif self.game_object.kind == "crate":
+            self.model = base.loader.loadModel("Models/cube")
+        elif self.game_object.kind == "floor":
+            self.model = base.loader.loadModel("Models/cube")
+        elif self.game_object.kind == "wall":
+            self.model = base.loader.loadModel("Models/cube")
+        else:
+            self.model = base.loader.loadModel("Models/cube")  # Default
 
-        # TODO: we don't always need a texture.  We need a
-        # mechanism to see if we need a texture or color,
-        # and what texture/color to use.
-        self.cube_texture = base.loader.loadTexture("Textures/crate.png")
-        self.cube.setTexture(self.cube_texture)
+        self.model.reparentTo(self.node_path)
 
-        bounds = self.cube.getTightBounds()
+       #will need updated to use a dictionary eventually. using temporarily with all of the pieces I will need
+        if self.game_object.kind == "crate":
+            self.cube_texture = base.loader.loadTexture("Textures/crate.png")
+            self.model.setTexture(self.cube_texture)
+        elif self.game_object.kind == "floor":
+            self.floor_texture = base.loader.loadTexture("Textures/grass.png")
+            self.model.setTexture(self.floor_texture)
+        elif self.game_object.kind == "wall":
+             self.wall_texture = base.loader.loadTexture("Textures/wall.png")
+
+        bounds = self.model.getTightBounds()
         # bounds is two vectors
         bounds = bounds[1]-bounds[0]
         # bounds is now the widths with bounds[0] the x width, bounds[1] the y depth, bounds[2] the z height
@@ -31,8 +45,7 @@ class ViewObject:
         x_scale = size[0] / bounds[0]
         y_scale = size[1] / bounds[1]
         z_scale = size[2] / bounds[2]
-
-        self.cube.setScale(x_scale, y_scale, z_scale)
+        self.model.setScale(x_scale, y_scale, z_scale)
 
         self.is_selected = False
         self.texture_on = True
@@ -55,18 +68,18 @@ class ViewObject:
             h = self.game_object.z_rotation
             p = self.game_object.x_rotation
             r = self.game_object.y_rotation
-            self.cube.setHpr(h, p, r)
-            self.cube.set_pos(*self.game_object.position)
+            self.model.setHpr(h, p, r)
+            self.model.set_pos(*self.game_object.position)
 
         # If the right control was pressed, and the game object
         # is currently selected, toggle the texture.
         if self.toggle_texture_pressed and self.game_object.is_selected:
             if self.texture_on:
                 self.texture_on = False
-                self.cube.setTextureOff(1)
+                self.model.setTextureOff(1)
             else:
                 self.texture_on = True
-                self.cube.setTexture(self.cube_texture)
+                self.model.setTexture(self.cube_texture)
 
         self.toggle_texture_pressed = False
         self.game_object.is_selected = False
