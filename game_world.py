@@ -4,6 +4,7 @@ from pubsub import pub
 from game_object import GameObject
 from player import Player
 from teleporter import Teleporter
+from ball import Ball
 
 
 class GameWorld:
@@ -49,7 +50,6 @@ class GameWorld:
         return node
 
     def create_box(self, position, size, kind, mass):
-        # The box shape needs half the size in each dimension
         shape = BulletBoxShape(Vec3(size[0] / 2, size[1] / 2, size[2] / 2))
         node = BulletRigidBodyNode(kind)
         node.setMass(mass)
@@ -141,22 +141,25 @@ class GameWorld:
         self.create_object([0, 0, -5], "floor", (40, 40, 2), 0, GameObject)
 
         #player starting position
-        self.create_object([0, -5, 10], "player", (1, 0.5, 0.25, 0.5), 10, Player)
+        player = self.create_object([0, -5, 10], "player", (1, 0.5, 0.25, 0.5), 10, Player)
+        player.is_collision_source = True
+
         #soccer ball starting position
-        self.create_object([0, 0, 0.5], "ball", (0.5, 0.5, 0.5), 1, GameObject)
+        ball = self.create_object([0, 0, 0.5], "ball", (0.5, 0.5, 0.5), 1, Ball)  # Assign to 'ball'
+        ball.is_collision_source = True
         #soccer goal
         self.create_object([0, 10, -4.5], "goal", (3, 1, 2), 0, GameObject, z_rotation=180)
-        # four walls enclosing field
+        #four walls enclosing field
         self.create_object([0, 20.5, -2.5], "wall", (40, 1, 5), 0, GameObject)
         self.create_object([0, -20.5, -2.5], "wall", (40, 1, 5), 0, GameObject)
         self.create_object([20.5, 0, -2.5], "wall", (1, 40, 5), 0, GameObject)
         self.create_object([-20.5, 0, -2.5], "wall", (1, 40, 5), 0, GameObject)
         #jay additions 3/31
-        self.create_object([3, 0, 0], "crate", (5, 2, 1), 10, GameObject)
-        self.create_object([-3, 0, -4], "teleporter", (1, 1, 1), 0, Teleporter)
-        player = self.create_object([0, -20, 0], "player", (1, 0.5, 0.25, 0.5), 10, Player)
-        player.is_collision_source = True
-        self.create_object([0, 0, -5], "crate", (1000, 1000, 0.5), 0, GameObject)
+        #self.create_object([3, 0, 0], "crate", (5, 2, 1), 10, GameObject)
+        #self.create_object([-3, 0, -4], "teleporter", (1, 1, 1), 0, Teleporter)
+        #player = self.create_object([0, -20, 0], "player", (1, 0.5, 0.25, 0.5), 10, Player)
+        #player.is_collision_source = True
+       # self.create_object([0, 0, -5], "crate", (1000, 1000, 0.5), 0, GameObject)
 
     def get_property(self, key):
         return self.properties.get(key)

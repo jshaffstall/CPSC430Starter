@@ -158,17 +158,8 @@ class Main(ShowBase):
         self.player.setLinearMovement(speed)
 
         if 'kick' in events:
-            ball = next((obj for obj in self.game_world.game_objects.values() if obj.kind == "ball"), None)
-            if ball:
-                player_pos = self.player.getPos()
-                ball_pos = ball.position
-                dist = (player_pos - ball_pos).length()
-                if dist < 2: #distance from player to kick
-                    #calculate direction based on player's heading value
-                    q = Quat()
-                    q.setHpr((self.player.getH(), 0, 0))
-                    direction = q.getForward()
-                    ball.physics.applyCentralImpulse(direction * 15)
+            #moved to ball
+            print("Kick input should happen")
 
     def new_player_object(self, game_object):
         if game_object.kind == 'player':
