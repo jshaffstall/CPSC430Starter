@@ -3,6 +3,7 @@ from panda3d.core import TransformState, VBase3
 
 class GameObject:
     def __init__(self, position, kind, id, size, physics):
+        # Needed to initialize self._physics for the if check in the setter
         self.physics = physics
         self.position = position
         self.kind = kind
@@ -13,9 +14,9 @@ class GameObject:
         self.size = size
 
         self.is_selected = False
+        self.is_collision_source = False
 
-        # Store a reference back to the game object
-        if physics:
+        if self.physics:
             self.physics.setPythonTag("owner", self)
 
     @property
@@ -88,6 +89,14 @@ class GameObject:
     def z_rotation(self, value):
         self._z_rotation = value
 
+    @property
+    def is_collision_source(self):
+        return self._is_collision_source
+
+    @is_collision_source.setter
+    def is_collision_source(self, value):
+        self._is_collision_source = value
+
     def selected(self):
          self.is_selected = True
 
@@ -98,4 +107,4 @@ class GameObject:
         pass
 
     def collision(self, other):
-        pass
+        print(f"{self.kind} collides with {other.kind}")
