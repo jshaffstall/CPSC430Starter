@@ -145,7 +145,7 @@ class GameWorld:
         player.is_collision_source = True
 
         #soccer ball starting position
-        ball = self.create_object([0, 0, 0.5], "ball", (0.5, 0.5, 0.5), 1, Ball)  # Assign to 'ball'
+        ball = self.create_object([0, 0, 0.5], "ball", (0.5, 0.5, 0.5), 1, Ball)
         ball.is_collision_source = True
         #soccer goal
         self.create_object([0, 10, -4.5], "goal", (3, 1, 2), 0, GameObject, z_rotation=180)

@@ -14,7 +14,7 @@ class Player(GameObject):
         pass
 
     def collision(self, other):
-        print(f"{self.kind} collides with {other.kind}")
+        pass
 
     # Override these and don't defer to the physics object
     @property

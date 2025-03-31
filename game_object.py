@@ -107,4 +107,4 @@ class GameObject:
         pass
 
     def collision(self, other):
-        print(f"{self.kind} collides with {other.kind}")
+        pass

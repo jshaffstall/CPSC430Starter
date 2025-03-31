@@ -71,7 +71,6 @@ class Main(ShowBase):
             self.make_text(f"Game Over! Final Score: {final_score}", (0, 0), TextNode.ACenter)
 
     def handle_input(self, events=None):
-        # Simple place to put debug outputs so they only happen on a click
         if 'toggleTexture' in events:
             print(f"Player position: {self.player.getPos()}")
             print(f"Forward position: {self.forward(self.player.getHpr(), self.player.getPos(), 5)}")
@@ -159,7 +158,7 @@ class Main(ShowBase):
 
         if 'kick' in events:
             #moved to ball
-            print("Kick input should happen")
+            pass
 
     def new_player_object(self, game_object):
         if game_object.kind == 'player':
