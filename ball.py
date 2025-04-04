@@ -11,13 +11,11 @@ class Ball(GameObject):
     def collision(self, other):
         if other.kind == "player":
             self.is_kicked = True
-            print(f"{self.kind} was kicked by {other.kind}")
             transform = other.physics.getTransform()
             q = transform.getQuat()
             direction = q.getForward()
             impulse = direction * self.kick_force
             self.physics.applyCentralImpulse(impulse)
-
 
     def tick(self, dt):
         if self.is_kicked:
