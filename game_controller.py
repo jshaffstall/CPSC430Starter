@@ -74,6 +74,15 @@ class Main(ShowBase):
         delta_z = forward[2]
         return x + delta_x*distance, y + delta_y*distance, z + delta_z*distance
 
+    def is_key_active(self, key):
+        if  key in self.input_events:
+            return True
+
+        if inputState.isSet(key):
+            return True
+
+        return False
+
     def tick(self, task):
         if 'toggleMouseMove' in self.input_events:
             if self.CursorOffOn == 'Off':
@@ -154,23 +163,26 @@ class Main(ShowBase):
         speed = Vec3(0, 0, 0)
         delta = 5.0
 
-        if inputState.isSet('moveForward'):
+        if self.is_key_active('moveForward'):
             speed.setY(delta)
 
-        if inputState.isSet('moveBackward'):
+        if self.is_key_active('moveBackward'):
             speed.setY(-delta)
 
-        if inputState.isSet('moveLeft'):
+        if self.is_key_active('moveLeft'):
             speed.setX(-delta)
 
-        if inputState.isSet('moveRight'):
+        if self.is_key_active('moveRight'):
             speed.setX(delta)
 
-        if inputState.isSet('crouch') and not self.player.isCrouching:
+        if self.is_key_active('crouch') and not self.player.isCrouching:
             # self.player.startJump(2)
             self.player.startCrouch()
-        elif not inputState.isSet('crouch')  and self.player.isCrouching:
+        elif not self.is_key_active('crouch')  and self.player.isCrouching:
             self.player.stopCrouch()
+
+        if self.is_key_active('jump'):
+            self.player.startJump()
 
         self.player.setLinearMovement(speed)
 
