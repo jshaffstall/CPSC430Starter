@@ -16,6 +16,7 @@ controls = {
     't': 'teleport',
     'mouse1': 'toggleTexture',
     'space': 'jump',
+    'n': 'next_level',
 }
 
 held_keys = {
@@ -56,9 +57,8 @@ class Main(ShowBase):
 
     def handle_input(self, events=None):
         # Simple place to put debug outputs so they only happen on a click
-        if 'toggleTexture' in events:
-            print(f"Player position: {self.player.getPos()}")
-            print(f"Forward position: {self.forward(self.player.getHpr(), self.player.getPos(), 5)}")
+        if self.is_key_active('next_level'):
+            self.game_world.load_world('levels/level2.json')
 
     def input_event(self, event):
         self.input_events[event] = True
@@ -157,7 +157,10 @@ class Main(ShowBase):
         if game_object.kind != 'player':
             return
 
-        self.player = game_object
+        if self.player:
+            self.player.set_game_object(game_object)
+        else:
+            self.player = game_object
 
     def move_player(self, events=None):
         speed = Vec3(0, 0, 0)

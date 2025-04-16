@@ -19,6 +19,10 @@ class GameObject:
         if self.physics:
             self.physics.setPythonTag("owner", self)
 
+    def deleted(self):
+        if self.physics:
+            self.physics.setPythonTag("owner", None)
+
     @property
     def physics(self):
         return self._physics
