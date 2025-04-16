@@ -69,6 +69,12 @@ class GameObject:
 
         self._position = value
 
+    def jump_to_position(self, value):
+        if self.physics:
+            self.physics.setTransform(TransformState.makePos(VBase3(value[0], value[1], value[2])))
+
+        self._position = value
+
     @property
     def x_rotation(self):
         return self._x_rotation
