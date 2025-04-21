@@ -5,7 +5,7 @@ from game_object import GameObject
 from player import Player
 from teleporter import Teleporter
 from ball import Ball
-
+from speed_boost import SpeedBoost
 
 class GameWorld:
     def __init__(self, debugNode):
@@ -13,7 +13,8 @@ class GameWorld:
             "score": 0,
             "time_remaining": 60.0,
             "game_over": False,
-            "quit": False
+            "quit": False,
+            "boost_spawn_timer": 10.0 #10 seconds
         }
         self.game_objects = {}
         self.next_id = 0
@@ -29,7 +30,9 @@ class GameWorld:
             "wall": self.create_box,
             "red box": self.create_box,
             "teleporter": self.create_box,
+            "speed_boost": self.create_sphere
         }
+        pub.subscribe(self.remove_object, "remove_object")
 
     def create_capsule(self, position, size, kind, mass):
         radius = size[0]
@@ -92,6 +95,21 @@ class GameWorld:
         pub.sendMessage('create', game_object=obj)
         return obj
 
+    def remove_object(self, game_object):
+        if game_object.id in self.game_objects:
+            if game_object.physics:
+                self.physics_world.removeRigidBody(game_object.physics)
+            del self.game_objects[game_object.id]
+            pub.sendMessage('delete', game_object=game_object)
+
+    def spawn_speed_boost(self):
+        import random
+        #import random block within the field - field level
+        x = random.uniform(-15, 15)
+        y = random.uniform(-15, 15)
+        z = -4 + 0.25
+        self.create_object([x, y, z], "speed_boost", (0.5, 0.5, 0.5), 0, SpeedBoost)
+
     def check_goal(self, ball):
         goal = next((obj for obj in self.game_objects.values() if obj.kind == "goal"), None)
         if not goal or not ball:
@@ -110,23 +128,32 @@ class GameWorld:
         ball.physics.setLinearVelocity(Vec3(0, 0, 0))
 
     def tick(self, dt):
-        for id in self.game_objects:
-            self.game_objects[id].tick(dt)
-
-        for id in self.game_objects:
+        to_remove = []
+        for id in list(self.game_objects.keys()):
+            obj = self.game_objects[id]
+            obj.tick(dt)
+            if obj.kind == "speed_boost" and obj.is_collected:
+                to_remove.append(id)
+        for id in list(self.game_objects.keys()):
             if self.game_objects[id].is_collision_source:
                 contacts = self.get_all_contacts(self.game_objects[id])
-
                 for contact in contacts:
                     if contact.getNode1() and contact.getNode1().getPythonTag("owner"):
-                        # Notify both objects about the collision
                         contact.getNode1().getPythonTag("owner").collision(self.game_objects[id])
                         self.game_objects[id].collision(contact.getNode1().getPythonTag("owner"))
+        for id in to_remove:
+            if id in self.game_objects:
+                self.remove_object(self.game_objects[id])
 
         self.physics_world.doPhysics(dt)
 
         if not self.properties["game_over"]:
             self.properties["time_remaining"] -= dt
+            self.properties["boost_spawn_timer"] -= dt
+            if self.properties["boost_spawn_timer"] <= 0:
+                self.spawn_speed_boost()
+                self.properties["boost_spawn_timer"] = 20.0
+
             ball = next((obj for obj in self.game_objects.values() if obj.kind == "ball"), None)
             if ball and self.check_goal(ball):
                 self.properties["score"] += 1

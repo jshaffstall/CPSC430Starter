@@ -149,7 +149,7 @@ class Main(ShowBase):
 
     def move_player(self, events=None):
         speed = Vec3(0, 0, 0)
-        delta = 5.0
+        delta = 5.0 * self.player.game_object.speed / 0.1
         if inputState.isSet('moveForward'): speed.setY(delta)
         if inputState.isSet('moveBackward'): speed.setY(-delta)
         if inputState.isSet('moveLeft'): speed.setX(-delta)
