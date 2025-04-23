@@ -21,8 +21,11 @@ class ViewObject:
             self.model = base.loader.loadModel("Models/cube")
         elif self.game_object.kind == "wall":
             self.model = base.loader.loadModel("Models/cube")
+        elif self.game_object.kind == "speed_boost":
+            self.model = base.loader.loadModel("Models/cube") #find custom model for this
+            self.model.setColor(1, 1, 0, 1)
         else:
-            self.model = base.loader.loadModel("Models/cube")  # Default
+            self.model = base.loader.loadModel("Models/cube")
 
         self.model.reparentTo(self.node_path)
 
@@ -35,6 +38,8 @@ class ViewObject:
             self.model.setTexture(self.floor_texture)
         elif self.game_object.kind == "wall":
              self.wall_texture = base.loader.loadTexture("Textures/wall.png")
+        elif self.game_object.kind == "speed_boost":
+            pass
 
         bounds = self.model.getTightBounds()
         # bounds is two vectors
@@ -53,7 +58,7 @@ class ViewObject:
         pub.subscribe(self.toggle_texture, 'input')
 
     def deleted(self):
-        pass
+        self.node_path.removeNode()
 
     def toggle_texture(self, events=None):
         if 'toggleTexture' in events:
